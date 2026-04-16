@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Desenvolt Solar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 font-sans">
+
+<div class="flex h-screen">
+
+  <!-- MENU -->
+
+  <aside class="w-64 bg-green-800 text-white p-6">
+    <h1 class="text-2xl font-bold mb-6">☀ Desenvolt</h1>
+
+```
+<button onclick="showPage('dashboard', this)" class="menu active">Dashboard</button>
+<button onclick="showPage('usinas', this)" class="menu">Usinas</button>
+<button onclick="showPage('alertas', this)" class="menu">Alertas</button>
+```
+
+  </aside>
+
+  <!-- CONTEÚDO -->
+
+  <main class="flex-1 p-6">
+
+```
+<!-- DASHBOARD -->
+<section id="dashboard" class="page">
+  <h2 class="title">Dashboard</h2>
+
+  <div class="grid grid-cols-3 gap-4">
+    <div class="card">Usinas<br><b id="totalUsinas">0</b></div>
+    <div class="card">Geração Total<br><b id="geracaoTotal">0 kWh</b></div>
+    <div class="card">Alertas<br><b id="totalAlertas">0</b></div>
+  </div>
+</section>
+
+<!-- USINAS -->
+<section id="usinas" class="page hidden">
+  <h2 class="title">Cadastrar Usina</h2>
+
+  <input id="nome" placeholder="Nome da Usina" class="input">
+  <input id="pot" placeholder="Potência (kWp)" class="input">
+  <input id="user" placeholder="Usuário Growatt" class="input">
+  <input id="pass" type="password" placeholder="Senha Growatt" class="input">
+
+  <button onclick="addUsina()" class="btn">Salvar Usina</button>
+</section>
+
+<!-- ALERTAS -->
+<section id="alertas" class="page hidden">
+  <h2 class="title">Alertas</h2>
+  <ul id="listaAlertas"></ul>
+</section>
+```
+
+  </main>
+</div>
+
+<style>
+.menu { display:block; width:100%; text-align:left; padding:8px; margin-bottom:5px; border-radius:6px; }
+.menu.active { background:#14532d; }
+
+.title { font-size:22px; font-weight:bold; margin-bottom:15px; }
+
+.input {
+  display:block;
+  width:100%;
+  padding:8px;
+  margin-bottom:10px;
+  border-radius:6px;
+  border:1px solid #ccc;
+}
+
+.btn {
+  background:#16a34a;
+  color:white;
+  padding:10px;
+  border-radius:6px;
+  width:100%;
+}
+
+.card {
+  background:white;
+  padding:20px;
+  border-radius:10px;
+  text-align:center;
+}
+
+.hidden { display:none; }
+</style>
+
+<script>
+
+// 🔴 COLE A URL DO SEU BACKEND AQUI (Railway)
+const API = "https://SEU-BACKEND.up.railway.app";
+
+let usinas = [];
+let alertas = [];
+
+// Navegação
+function showPage(id, el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+
+  document.querySelectorAll('.menu').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// Salvar usina
+async function addUsina(){
+  let usina = {
+    nome: document.getElementById("nome").value,
+    pot: Number(document.getElementById("pot").value),
+    portal: "growatt",
+    usuario: document.getElementById("user").value,
+    senha: document.getElementById("pass").value
+  };
+
+  usinas.push(usina);
+
+  await fetch(API + "/usinas", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(usina)
+  });
+
+  atualizarDashboard();
+  alert("Usina cadastrada!");
+}
+
+// Buscar dados do backend
+async function atualizarDados(){
+  try{
+    const res = await fetch(API + "/geracao");
+    const dados = await res.json();
+
+    let total = 0;
+    alertas = [];
+
+    for(let nome in dados){
+      if(nome.includes("_alerta")){
+        alertas.push(dados[nome]);
+      } else {
+        total += Number(dados[nome]);
+      }
+    }
+
+    document.getElementById("geracaoTotal").innerText = total + " kWh";
+    document.getElementById("totalAlertas").innerText = alertas.length;
+
+    renderAlertas();
+
+  } catch(e){
+    console.log("Erro ao conectar com backend");
+  }
+}
+
+// Render alertas
+function renderAlertas(){
+  let ul = document.getElementById("listaAlertas");
+  ul.innerHTML = alertas.map(a=>`<li style='color:red'>${a}</li>`).join('');
+}
+
+// Atualizar dashboard
+function atualizarDashboard(){
+  document.getElementById("totalUsinas").innerText = usinas.length;
+}
+
+// Atualiza automático
+setInterval(atualizarDados, 15000);
+
+</script>
+
+</body>
+</html>
